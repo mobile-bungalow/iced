@@ -2,8 +2,8 @@
 use crate::{
     layout, mouse, overlay,
     overlay::menu::{self, Menu},
-    scrollable, text, Clipboard, Element, Event, Hasher, Layout, Length, Point,
-    Rectangle, Size, Widget,
+    scrollable, text, Clipboard, Element, Event, EventInteraction, Hasher,
+    Layout, Length, Point, Rectangle, Size, Widget,
 };
 use std::borrow::Cow;
 
@@ -223,9 +223,10 @@ where
         messages: &mut Vec<Message>,
         _renderer: &Renderer,
         _clipboard: Option<&dyn Clipboard>,
-    ) {
+    ) -> EventInteraction {
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                let mut consumed = false;
                 if *self.is_open {
                     // TODO: Encode cursor availability in the type system
                     *self.is_open =
@@ -234,6 +235,7 @@ where
                     let selected = self.selected.as_ref();
 
                     *self.is_open = true;
+                    consumed = true;
                     *self.hovered_option = self
                         .options
                         .iter()
@@ -244,9 +246,11 @@ where
                     messages.push((self.on_selected)(last_selection));
 
                     *self.is_open = false;
-                }
+                };
+
+                EventInteraction { consumed }
             }
-            _ => {}
+            _ => EventInteraction::default(),
         }
     }
 

@@ -1,6 +1,9 @@
 pub use crate::Overlay;
 
-use crate::{layout, Clipboard, Event, Hasher, Layout, Point, Size, Vector};
+use crate::{
+    layout, Clipboard, Event, EventInteraction, Hasher, Layout, Point, Size,
+    Vector,
+};
 
 /// A generic [`Overlay`].
 ///
@@ -67,7 +70,7 @@ where
         messages: &mut Vec<Message>,
         renderer: &Renderer,
         clipboard: Option<&dyn Clipboard>,
-    ) {
+    ) -> EventInteraction {
         self.overlay.on_event(
             event,
             layout,
@@ -136,10 +139,10 @@ where
         messages: &mut Vec<B>,
         renderer: &Renderer,
         clipboard: Option<&dyn Clipboard>,
-    ) {
+    ) -> EventInteraction {
         let mut original_messages = Vec::new();
 
-        self.content.on_event(
+        let interaction = self.content.on_event(
             event,
             layout,
             cursor_position,
@@ -151,6 +154,8 @@ where
         original_messages
             .drain(..)
             .for_each(|message| messages.push((self.mapper)(message)));
+
+        interaction
     }
 
     fn draw(

@@ -1,8 +1,8 @@
 //! Create choices using radio buttons.
 use crate::{
-    layout, mouse, row, text, Align, Clipboard, Element, Event, Hasher,
-    HorizontalAlignment, Layout, Length, Point, Rectangle, Row, Text,
-    VerticalAlignment, Widget,
+    layout, mouse, row, text, Align, Clipboard, Element, Event,
+    EventInteraction, Hasher, HorizontalAlignment, Layout, Length, Point,
+    Rectangle, Row, Text, VerticalAlignment, Widget,
 };
 
 use std::hash::Hash;
@@ -164,14 +164,17 @@ where
         messages: &mut Vec<Message>,
         _renderer: &Renderer,
         _clipboard: Option<&dyn Clipboard>,
-    ) {
+    ) -> EventInteraction {
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                 if layout.bounds().contains(cursor_position) {
                     messages.push(self.on_click.clone());
+                    EventInteraction { consumed: true }
+                } else {
+                    EventInteraction::default()
                 }
             }
-            _ => {}
+            _ => EventInteraction::default(),
         }
     }
 

@@ -1,8 +1,8 @@
 //! Build and show dropdown menus.
 use crate::{
     container, layout, mouse, overlay, scrollable, text, Clipboard, Container,
-    Element, Event, Hasher, Layout, Length, Point, Rectangle, Scrollable, Size,
-    Vector, Widget,
+    Element, Event, EventInteraction, Hasher, Layout, Length, Point, Rectangle,
+    Scrollable, Size, Vector, Widget,
 };
 
 /// A list of selectable options.
@@ -235,7 +235,7 @@ where
         messages: &mut Vec<Message>,
         renderer: &Renderer,
         clipboard: Option<&dyn Clipboard>,
-    ) {
+    ) -> EventInteraction {
         self.container.on_event(
             event.clone(),
             layout,
@@ -243,7 +243,7 @@ where
             messages,
             renderer,
             clipboard,
-        );
+        )
     }
 
     fn draw(
@@ -332,23 +332,28 @@ where
         _messages: &mut Vec<Message>,
         renderer: &Renderer,
         _clipboard: Option<&dyn Clipboard>,
-    ) {
+    ) -> EventInteraction {
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                 let bounds = layout.bounds();
+                let mut consumed = false;
 
                 if bounds.contains(cursor_position) {
                     if let Some(index) = *self.hovered_option {
                         if let Some(option) = self.options.get(index) {
                             *self.last_selection = Some(option.clone());
+                            consumed = true;
                         }
                     }
                 }
+
+                EventInteraction { consumed }
             }
             Event::Mouse(mouse::Event::CursorMoved { .. }) => {
                 let bounds = layout.bounds();
                 let text_size =
                     self.text_size.unwrap_or(renderer.default_size());
+                let mut consumed = false;
 
                 if bounds.contains(cursor_position) {
                     *self.hovered_option = Some(
@@ -356,9 +361,11 @@ where
                             / f32::from(text_size + self.padding * 2))
                             as usize,
                     );
+                    consumed = true;
                 }
+                EventInteraction { consumed }
             }
-            _ => {}
+            _ => EventInteraction { consumed: false },
         }
     }
 

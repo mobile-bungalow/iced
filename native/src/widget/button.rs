@@ -5,8 +5,8 @@
 //! [`Button`]: struct.Button.html
 //! [`State`]: struct.State.html
 use crate::{
-    layout, mouse, Clipboard, Element, Event, Hasher, Layout, Length, Point,
-    Rectangle, Widget,
+    layout, mouse, Clipboard, Element, Event, EventInteraction, Hasher, Layout,
+    Length, Point, Rectangle, Widget,
 };
 use std::hash::Hash;
 
@@ -182,16 +182,17 @@ where
         messages: &mut Vec<Message>,
         _renderer: &Renderer,
         _clipboard: Option<&dyn Clipboard>,
-    ) {
+    ) -> EventInteraction {
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                let consumed = layout.bounds().contains(cursor_position);
                 if self.on_press.is_some() {
-                    let bounds = layout.bounds();
-
-                    self.state.is_pressed = bounds.contains(cursor_position);
+                    self.state.is_pressed = consumed;
                 }
+                EventInteraction { consumed }
             }
             Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
+                let consumed = false;
                 if let Some(on_press) = self.on_press.clone() {
                     let bounds = layout.bounds();
 
@@ -204,8 +205,10 @@ where
                         messages.push(on_press);
                     }
                 }
+
+                EventInteraction { consumed }
             }
-            _ => {}
+            _ => EventInteraction { consumed: false },
         }
     }
 

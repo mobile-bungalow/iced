@@ -2,7 +2,9 @@ use crate::container;
 use crate::layout;
 use crate::overlay;
 use crate::pane_grid::{self, TitleBar};
-use crate::{Clipboard, Element, Event, Hasher, Layout, Point, Size};
+use crate::{
+    Clipboard, Element, Event, EventInteraction, Hasher, Layout, Point, Size,
+};
 
 /// The content of a [`Pane`].
 ///
@@ -154,11 +156,12 @@ where
         messages: &mut Vec<Message>,
         renderer: &Renderer,
         clipboard: Option<&dyn Clipboard>,
-    ) {
+    ) -> EventInteraction {
+        let mut interaction = EventInteraction::default();
         let body_layout = if let Some(title_bar) = &mut self.title_bar {
             let mut children = layout.children();
 
-            title_bar.on_event(
+            let title_event = title_bar.on_event(
                 event.clone(),
                 children.next().unwrap(),
                 cursor_position,
@@ -167,19 +170,23 @@ where
                 clipboard,
             );
 
+            interaction = interaction.union(&title_event);
+
             children.next().unwrap()
         } else {
             layout
         };
 
-        self.body.on_event(
-            event,
-            body_layout,
-            cursor_position,
-            messages,
-            renderer,
-            clipboard,
-        );
+        self.body
+            .on_event(
+                event,
+                body_layout,
+                cursor_position,
+                messages,
+                renderer,
+                clipboard,
+            )
+            .union(&interaction)
     }
 
     pub(crate) fn hash_layout(&self, state: &mut Hasher) {

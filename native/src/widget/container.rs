@@ -2,8 +2,8 @@
 use std::hash::Hash;
 
 use crate::{
-    layout, overlay, Align, Clipboard, Element, Event, Hasher, Layout, Length,
-    Point, Rectangle, Widget,
+    layout, overlay, Align, Clipboard, Element, Event, EventInteraction,
+    Hasher, Layout, Length, Point, Rectangle, Widget,
 };
 
 use std::u32;
@@ -174,7 +174,7 @@ where
         messages: &mut Vec<Message>,
         renderer: &Renderer,
         clipboard: Option<&dyn Clipboard>,
-    ) {
+    ) -> EventInteraction {
         self.content.widget.on_event(
             event,
             layout.children().next().unwrap(),

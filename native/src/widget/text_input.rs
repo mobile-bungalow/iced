@@ -17,8 +17,8 @@ use editor::Editor;
 use crate::{
     keyboard, layout,
     mouse::{self, click},
-    text, Clipboard, Element, Event, Hasher, Layout, Length, Point, Rectangle,
-    Size, Widget,
+    text, Clipboard, Element, Event, EventInteraction, Hasher, Layout, Length,
+    Point, Rectangle, Size, Widget,
 };
 
 use std::u32;
@@ -214,12 +214,14 @@ where
         messages: &mut Vec<Message>,
         renderer: &Renderer,
         clipboard: Option<&dyn Clipboard>,
-    ) {
+    ) -> EventInteraction {
+        let mut consumed = false;
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                 let is_clicked = layout.bounds().contains(cursor_position);
 
                 if is_clicked {
+                    consumed = true;
                     let text_layout = layout.children().next().unwrap();
                     let target = cursor_position.x - text_layout.bounds().x;
 
@@ -280,12 +282,15 @@ where
 
                 self.state.is_dragging = is_clicked;
                 self.state.is_focused = is_clicked;
+                EventInteraction { consumed }
             }
             Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
                 self.state.is_dragging = false;
+                EventInteraction::default()
             }
             Event::Mouse(mouse::Event::CursorMoved { x, .. }) => {
                 if self.state.is_dragging {
+                    consumed = true;
                     let text_layout = layout.children().next().unwrap();
                     let target = x - text_layout.bounds().x;
 
@@ -311,19 +316,24 @@ where
                         );
                     }
                 }
+                EventInteraction { consumed }
             }
-            Event::Keyboard(keyboard::Event::CharacterReceived(c))
+            Event::Keyboard(keyboard::Event::CharacterReceived(c)) => {
                 if self.state.is_focused
                     && self.state.is_pasting.is_none()
-                    && !c.is_control() =>
-            {
-                let mut editor =
-                    Editor::new(&mut self.value, &mut self.state.cursor);
+                    && !c.is_control()
+                {
+                    consumed = true;
+                    let mut editor =
+                        Editor::new(&mut self.value, &mut self.state.cursor);
 
-                editor.insert(c);
+                    editor.insert(c);
 
-                let message = (self.on_change)(editor.contents());
-                messages.push(message);
+                    let message = (self.on_change)(editor.contents());
+                    messages.push(message);
+                }
+
+                EventInteraction { consumed }
             }
             Event::Keyboard(keyboard::Event::KeyPressed {
                 key_code,
@@ -333,6 +343,8 @@ where
                     if let Some(on_submit) = self.on_submit.clone() {
                         messages.push(on_submit);
                     }
+                    consumed = true;
+                    EventInteraction { consumed }
                 }
                 keyboard::KeyCode::Backspace => {
                     if platform::is_jump_modifier_pressed(modifiers)
@@ -353,6 +365,8 @@ where
 
                     let message = (self.on_change)(editor.contents());
                     messages.push(message);
+                    consumed = true;
+                    EventInteraction { consumed }
                 }
                 keyboard::KeyCode::Delete => {
                     if platform::is_jump_modifier_pressed(modifiers)
@@ -377,6 +391,7 @@ where
 
                     let message = (self.on_change)(editor.contents());
                     messages.push(message);
+                    EventInteraction { consumed }
                 }
                 keyboard::KeyCode::Left => {
                     if platform::is_jump_modifier_pressed(modifiers)
@@ -392,6 +407,8 @@ where
                     } else {
                         self.state.cursor.move_left(&self.value);
                     }
+                    consumed = true;
+                    EventInteraction { consumed }
                 }
                 keyboard::KeyCode::Right => {
                     if platform::is_jump_modifier_pressed(modifiers)
@@ -409,6 +426,7 @@ where
                     } else {
                         self.state.cursor.move_right(&self.value);
                     }
+                    EventInteraction { consumed }
                 }
                 keyboard::KeyCode::Home => {
                     if modifiers.shift {
@@ -419,6 +437,8 @@ where
                     } else {
                         self.state.cursor.move_to(0);
                     }
+                    consumed = true;
+                    EventInteraction { consumed }
                 }
                 keyboard::KeyCode::End => {
                     if modifiers.shift {
@@ -429,6 +449,8 @@ where
                     } else {
                         self.state.cursor.move_to(self.value.len());
                     }
+                    consumed = true;
+                    EventInteraction { consumed }
                 }
                 keyboard::KeyCode::V => {
                     if platform::is_copy_paste_modifier_pressed(modifiers) {
@@ -462,28 +484,33 @@ where
                     } else {
                         self.state.is_pasting = None;
                     }
+                    EventInteraction { consumed }
                 }
                 keyboard::KeyCode::A => {
                     if platform::is_copy_paste_modifier_pressed(modifiers) {
                         self.state.cursor.select_all(&self.value);
                     }
+                    EventInteraction { consumed }
                 }
                 keyboard::KeyCode::Escape => {
                     self.state.is_focused = false;
                     self.state.is_dragging = false;
                     self.state.is_pasting = None;
+                    EventInteraction { consumed }
                 }
-                _ => {}
+                _ => EventInteraction::default(),
             },
             Event::Keyboard(keyboard::Event::KeyReleased {
                 key_code, ..
             }) => match key_code {
                 keyboard::KeyCode::V => {
                     self.state.is_pasting = None;
+                    consumed = true;
+                    EventInteraction { consumed }
                 }
-                _ => {}
+                _ => EventInteraction::default(),
             },
-            _ => {}
+            _ => EventInteraction::default(),
         }
     }
 

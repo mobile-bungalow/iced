@@ -2,9 +2,9 @@
 use std::hash::Hash;
 
 use crate::{
-    layout, mouse, row, text, Align, Clipboard, Element, Event, Hasher,
-    HorizontalAlignment, Layout, Length, Point, Rectangle, Row, Text,
-    VerticalAlignment, Widget,
+    layout, mouse, row, text, Align, Clipboard, Element, Event,
+    EventInteraction, Hasher, HorizontalAlignment, Layout, Length, Point,
+    Rectangle, Row, Text, VerticalAlignment, Widget,
 };
 
 /// A box that can be checked.
@@ -161,7 +161,7 @@ where
         messages: &mut Vec<Message>,
         _renderer: &Renderer,
         _clipboard: Option<&dyn Clipboard>,
-    ) {
+    ) -> EventInteraction {
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                 let mouse_over = layout.bounds().contains(cursor_position);
@@ -169,8 +169,11 @@ where
                 if mouse_over {
                     messages.push((self.on_toggle)(!self.is_checked));
                 }
+                EventInteraction {
+                    consumed: mouse_over,
+                }
             }
-            _ => {}
+            _ => EventInteraction { consumed: false },
         }
     }
 

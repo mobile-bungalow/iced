@@ -30,7 +30,8 @@ pub use title_bar::TitleBar;
 
 use crate::{
     container, keyboard, layout, mouse, overlay, row, text, Clipboard, Element,
-    Event, Hasher, Layout, Length, Point, Rectangle, Size, Vector, Widget,
+    Event, EventInteraction, Hasher, Layout, Length, Point, Rectangle, Size,
+    Vector, Widget,
 };
 
 /// A collection of panes distributed using either vertical or horizontal splits
@@ -452,7 +453,8 @@ where
         messages: &mut Vec<Message>,
         renderer: &Renderer,
         clipboard: Option<&dyn Clipboard>,
-    ) {
+    ) -> EventInteraction {
+        let interaction = EventInteraction::default();
         match event {
             Event::Mouse(mouse_event) => match mouse_event {
                 mouse::Event::ButtonPressed(mouse::Button::Left) => {
@@ -566,8 +568,9 @@ where
 
         if self.state.picked_pane().is_none() {
             {
-                self.elements.iter_mut().zip(layout.children()).for_each(
-                    |((_, pane), layout)| {
+                self.elements.iter_mut().zip(layout.children()).fold(
+                    interaction,
+                    |interaction, ((_, pane), layout)| {
                         pane.on_event(
                             event.clone(),
                             layout,
@@ -576,9 +579,12 @@ where
                             renderer,
                             clipboard,
                         )
+                        .union(&interaction)
                     },
-                );
+                )
             }
+        } else {
+            interaction
         }
     }
 

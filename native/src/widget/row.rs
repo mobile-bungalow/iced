@@ -2,8 +2,8 @@
 use std::hash::Hash;
 
 use crate::{
-    layout, overlay, Align, Clipboard, Element, Event, Hasher, Layout, Length,
-    Point, Widget,
+    layout, overlay, Align, Clipboard, Element, Event, EventInteraction,
+    Hasher, Layout, Length, Point, Widget,
 };
 
 use std::u32;
@@ -165,19 +165,23 @@ where
         messages: &mut Vec<Message>,
         renderer: &Renderer,
         clipboard: Option<&dyn Clipboard>,
-    ) {
-        self.children.iter_mut().zip(layout.children()).for_each(
-            |(child, layout)| {
-                child.widget.on_event(
-                    event.clone(),
-                    layout,
-                    cursor_position,
-                    messages,
-                    renderer,
-                    clipboard,
-                )
+    ) -> EventInteraction {
+        self.children.iter_mut().zip(layout.children()).fold(
+            EventInteraction::default(),
+            |interaction, (child, layout)| {
+                child
+                    .widget
+                    .on_event(
+                        event.clone(),
+                        layout,
+                        cursor_position,
+                        messages,
+                        renderer,
+                        clipboard,
+                    )
+                    .union(&interaction)
             },
-        );
+        )
     }
 
     fn draw(

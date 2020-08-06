@@ -8,8 +8,8 @@
 //! [`Frame`]: struct.Frame.html
 use crate::{Backend, Defaults, Primitive, Renderer};
 use iced_native::{
-    layout, mouse, Clipboard, Element, Hasher, Layout, Length, Point, Size,
-    Vector, Widget,
+    layout, mouse, widget::EventInteraction, Clipboard, Element, Hasher,
+    Layout, Length, Point, Size, Vector, Widget,
 };
 use std::hash::Hash;
 use std::marker::PhantomData;
@@ -166,15 +166,16 @@ where
         messages: &mut Vec<Message>,
         _renderer: &Renderer<B>,
         _clipboard: Option<&dyn Clipboard>,
-    ) {
+    ) -> EventInteraction {
         let bounds = layout.bounds();
-
         let canvas_event = match event {
             iced_native::Event::Mouse(mouse_event) => {
                 Some(Event::Mouse(mouse_event))
             }
             _ => None,
         };
+
+        let consumed = canvas_event.is_some();
 
         let cursor = Cursor::from_window_position(cursor_position);
 
@@ -184,7 +185,8 @@ where
             {
                 messages.push(message);
             }
-        }
+        };
+        EventInteraction { consumed }
     }
 
     fn draw(

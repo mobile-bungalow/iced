@@ -176,7 +176,8 @@ where
         _messages: &mut Vec<Message>,
         _renderer: &Renderer,
         _clipboard: Option<&dyn Clipboard>,
-    ) {
+    ) -> EventInteraction {
+        EventInteraction { consumed: false }
     }
 
     /// Returns the overlay of the [`Element`], if there is any.
@@ -187,5 +188,23 @@ where
         _layout: Layout<'_>,
     ) -> Option<overlay::Element<'_, Message, Renderer>> {
         None
+    }
+}
+
+/// Metainfo associated with the [`on_event`] method.
+///
+/// [`on_event`]: trait.Widget.html#tymethod.on_event
+#[derive(Debug, Default)]
+pub struct EventInteraction {
+    /// true if event was consumed by the event handler function.
+    pub consumed: bool,
+}
+
+impl EventInteraction {
+    /// Produces an event interaction with the unified positive fields of
+    /// `self` and `other`
+    pub fn union(mut self, other: &Self) -> Self {
+        self.consumed &= other.consumed;
+        self
     }
 }
