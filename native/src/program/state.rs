@@ -103,6 +103,83 @@ where
     /// only if an update was necessary.
     ///
     /// [`Program`]: trait.Program.html
+    pub fn update_immediate(
+        &mut self,
+        bounds: Size,
+        cursor_position: Point,
+        event: Event,
+        clipboard: Option<&dyn Clipboard>,
+        renderer: &mut P::Renderer,
+        debug: &mut Debug,
+    ) -> (Option<Command<P::Message>>, crate::EventInteraction) {
+        let mut user_interface = build_user_interface(
+            &mut self.program,
+            self.cache.take().unwrap(),
+            renderer,
+            bounds,
+            debug,
+        );
+
+        debug.event_processing_started();
+        let (mut messages, interaction) = user_interface.update(
+            &[event],
+            cursor_position,
+            clipboard,
+            renderer,
+        );
+        messages.extend(self.queued_messages.drain(..));
+
+        //self.queued_events.clear();
+        debug.event_processing_finished();
+
+        if messages.is_empty() {
+            debug.draw_started();
+            self.primitive = user_interface.draw(renderer, cursor_position);
+            debug.draw_finished();
+
+            self.cache = Some(user_interface.into_cache());
+
+            (None, interaction)
+        } else {
+            // When there are messages, we are forced to rebuild twice
+            // for now :^)
+            let temp_cache = user_interface.into_cache();
+
+            let commands =
+                Command::batch(messages.into_iter().map(|message| {
+                    debug.log_message(&message);
+
+                    debug.update_started();
+                    let command = self.program.update(message);
+                    debug.update_finished();
+
+                    command
+                }));
+
+            let mut user_interface = build_user_interface(
+                &mut self.program,
+                temp_cache,
+                renderer,
+                bounds,
+                debug,
+            );
+
+            debug.draw_started();
+            self.primitive = user_interface.draw(renderer, cursor_position);
+            debug.draw_finished();
+
+            self.cache = Some(user_interface.into_cache());
+
+            (Some(commands), interaction)
+        }
+    }
+    /// Processes all the queued events and messages, rebuilding and redrawing
+    /// the widgets of the linked [`Program`] if necessary.
+    ///
+    /// Returns the [`Command`] obtained from [`Program`] after updating it,
+    /// only if an update was necessary.
+    ///
+    /// [`Program`]: trait.Program.html
     pub fn update(
         &mut self,
         bounds: Size,
@@ -120,7 +197,7 @@ where
         );
 
         debug.event_processing_started();
-        let mut messages = user_interface.update(
+        let (mut messages, _) = user_interface.update(
             &self.queued_events,
             cursor_position,
             clipboard,

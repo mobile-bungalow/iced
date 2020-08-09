@@ -200,7 +200,7 @@ where
         cursor_position: Point,
         clipboard: Option<&dyn Clipboard>,
         renderer: &Renderer,
-    ) -> Vec<Message> {
+    ) -> (Vec<Message>, crate::EventInteraction) {
         let mut messages = Vec::new();
 
         let base_cursor = if let Some(mut overlay) =
@@ -239,18 +239,23 @@ where
             cursor_position
         };
 
+        let mut interaction = crate::EventInteraction::default();
         for event in events {
-            let _ = self.root.widget.on_event(
-                event.clone(),
-                Layout::new(&self.base.layout),
-                base_cursor,
-                &mut messages,
-                renderer,
-                clipboard,
-            );
+            interaction = self
+                .root
+                .widget
+                .on_event(
+                    event.clone(),
+                    Layout::new(&self.base.layout),
+                    base_cursor,
+                    &mut messages,
+                    renderer,
+                    clipboard,
+                )
+                .union(&interaction);
         }
 
-        messages
+        (messages, interaction)
     }
 
     /// Draws the [`UserInterface`] with the provided [`Renderer`].
